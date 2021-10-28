@@ -1,5 +1,5 @@
 pipeline {
-    agent ('AWS-Build-Agents') 
+    agent {label 'AWS-Build-Agents'}
     stages {
         stage('Test Build') {
             steps {
