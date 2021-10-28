@@ -1,9 +1,11 @@
 pipeline {
-    agent ('AWS-Build-Agents') 
+    agent (label 'AWS-Build-Agents') 
     stages {
         stage('Test Build') {
             steps {
-                echo 'Hello, Test'
+                sh '''
+                docker --version
+                '''
             }
         }
         stage('Build') {
