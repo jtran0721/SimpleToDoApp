@@ -4,7 +4,7 @@ pipeline {
         stage('Test Build') {
             steps {
                 sh '''
-                docker --version
+                ./auto/build
                 '''
             }
         }
