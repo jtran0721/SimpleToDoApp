@@ -4,4 +4,4 @@ cd $(dirname $0)/..
 
 echo " Build docker image"
 
-docker build -t todoapp.v1 . --target=build ./
+docker build -t todoapp.v1 --target=build ./
