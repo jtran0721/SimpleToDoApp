@@ -2,9 +2,9 @@ pipeline {
     agent {label 'AWS-Build-Agents'}
     stages {
         stage('Build Docker Image') {
-            container('docker') {
-              echo 'docker'
-              sh "docker build -t todoapp.v1 ."
+            steps {
+              echo 'Building Docker Image'
+              sh "docker build -t todoapp.v1.1 ."
         }
         }
         stage('Build') {
