@@ -10,7 +10,6 @@ CMD ["yarn", "run", "build"]
 
 # Move files to production
 FROM nginx:1.21.3-alpine 
-WORKDIR /app/build
 
 COPY --from=build . /usr/share/nginx/html
 RUN rm /etc/nginx/conf.d/default.conf
