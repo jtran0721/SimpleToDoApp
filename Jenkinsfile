@@ -13,5 +13,11 @@ pipeline {
                 sh "./auto/publish"
             }
         }
+        stage('Deploy to staging') {
+            steps {
+                echo 'Push CloudFormation'
+                sh "./auto/deploy-staging"
+            }
+        }
     }
 }
