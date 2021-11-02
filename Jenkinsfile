@@ -4,12 +4,13 @@ pipeline {
         stage('Build Docker Image') {
             steps {
               echo 'Building Docker Image'
-              sh "docker build -t todoapp.v1.1 ."
+               
         }
         }
-        stage('Build') {
+        stage('Publish to AWS ECR') {
             steps {
-                echo 'Hello, Build'
+                echo 'Get the artiafact and push to ECR'
+                sh "./auto/publish"
             }
         }
     }
