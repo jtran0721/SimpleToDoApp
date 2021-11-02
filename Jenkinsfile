@@ -16,7 +16,7 @@ pipeline {
         stage('Deploy to staging') {
             steps {
                 echo 'Push CloudFormation'
-                sh "./auto/deploy-to-staging"
+                sh "aws cloudformation create-stack --stack-name todoapp-deployment --template-body file://publish-staging.yml"
             }
         }
     }
