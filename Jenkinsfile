@@ -16,7 +16,7 @@ pipeline {
         stage('Deploy to staging') {
             steps {
                 echo 'Push CloudFormation'
-                sh "./auto/deploy-staging"
+                sh "./auto/deploy-to-staging"
             }
         }
     }
