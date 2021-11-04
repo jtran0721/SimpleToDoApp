@@ -1,0 +1,3 @@
+#! /bin/bash -e
+
+aws cloudformation create-stack --stack-name prd-deployment --template-body file://$PWD/ecs-deployment.yml --region 'ap-southeast-2'
