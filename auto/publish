@@ -4,8 +4,8 @@
 
 cd $(dirname $0)/..
 
-REPOSITORY="585781887322.dkr.ecr.ap-southeast-2.amazonaws.com/todoapp/todoapp"
-VERSION=$(TZ=Australia/Melbourne date +'%Y%m%d%H%M')
+REPOSITORY="585781887322.dkr.ecr.ap-southeast-2.amazonaws.com/jenkins/todoapp"
+VERSION=${currentBuild.number}
 
 docker build -t ${REPOSITORY}:${VERSION} .
 
