@@ -16,7 +16,7 @@ pipeline {
         stage('Deploy to staging') {
             steps {
                 echo 'Push CloudFormation'
-                sh "aws cloudformation create-stack --stack-name prd-deployment --template-body file://$PWD/ecs-deployment.yml --region 'ap-southeast-2'"
+                sh "aws cloudformation create-stack --stack-name prd-deployment --template-body file://ecs-deployment.yml --region 'ap-southeast-2'"
             }
         }
     }
