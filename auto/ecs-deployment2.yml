@@ -37,7 +37,7 @@ Resources:
     Properties:
       MinCapacity: 1
       MaxCapacity: 2
-      ResourceId: service/Jenkins-App-Deploy/todoapp-ecs-svc
+      ResourceId: service/ToDoApp-Cluster/todoapp-ecs-svc
       ScalableDimension: ecs:service:DesiredCount
       ServiceNamespace: ecs
       RoleARN: !GetAtt AutoScalingRole.Arn
@@ -68,15 +68,15 @@ Resources:
   Cluster:
     Type: AWS::ECS::Cluster
     Properties:
-      ClusterName: Jenkins-App-Deploy
+      ClusterName: ToDoApp-Cluster
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: todoapp-log-group
+      LogGroupName: todoapp-ecs-logs
   ExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: todoapp-iam-role
+      RoleName: todoapp-ecs-role
       AssumeRolePolicyDocument:
         Statement:
           - Effect: Allow
