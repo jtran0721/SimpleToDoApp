@@ -24,15 +24,15 @@ Resources:
   Cluster:
     Type: AWS::ECS::Cluster
     Properties:
-      ClusterName: aws-ecs-typescript-api
+      clusterArn: arn:aws:ecs:ap-southeast-2:585781887322:cluster/Jenkins-App-Deploy
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: aws-ecs-typescript-api-group
+      LogGroupName: todoapp-log-group
   ExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: aws-ecs-typescript-api-role
+      RoleName: todoapp-iam-role
       AssumeRolePolicyDocument:
         Statement:
           - Effect: Allow
@@ -71,14 +71,14 @@ Resources:
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: aws-ecs-typescript-task
+      Family: todoapp-ecs-task
       Cpu: 256
       Memory: 512
       NetworkMode: awsvpc
       ExecutionRoleArn: !Ref ExecutionRole
       TaskRoleArn: !Ref TaskRole
       ContainerDefinitions:
-        - Name: aws-ecs-typescript-container
+        - Name: todoapp-container
           Image: 585781887322.dkr.ecr.ap-southeast-2.amazonaws.com/jenkins/todoapp:202111041714
           PortMappings:
             - ContainerPort: 80
@@ -123,7 +123,7 @@ Resources:
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: aws-ecs-typescript-api-alb
+      Name: todoapp-alb
       Subnets:
         - !Ref PrivateSub1
         - !Ref PrivateSub2

@@ -10,7 +10,7 @@ pipeline {
         stage('Deploy to staging') {
             steps {
                 echo 'Push CloudFormation'
-                sh "aws cloudformation create-stack --stack-name todoapp-deployment --template-body file://auto/ecs-deployment.yml --region 'ap-southeast-2' --capabilities Jenkins-Agent-Build-Role "
+                sh "aws cloudformation create-stack --stack-name todoapp-deployment --template-body file://auto/ecs-deployment.yml --region 'ap-southeast-2'"
             }
         }
     }
