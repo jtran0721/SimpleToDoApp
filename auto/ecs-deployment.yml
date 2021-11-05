@@ -24,7 +24,7 @@ Resources:
   Cluster:
     Type: AWS::ECS::Cluster
     Properties:
-      clusterArn: arn:aws:ecs:ap-southeast-2:585781887322:cluster/Jenkins-App-Deploy
+      ClusterName: ToDoApp-Cluster
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
