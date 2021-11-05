@@ -1,643 +1,137 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: Deploy a service into an ECS cluster behind a public load balancer.
-
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  PrivateSub1:
+    Type: String
+    Default: subnet-0dcbe5dc23cad4fae
+  PrivateSub2:
+    Type: String
+    Default: subnet-04dafc6015a245202
+  VPCID:
+    Type: String
+    Default: vpc-0c6c0a488ab519e12
+  DomainName:
+    Type: String
+    Default: solzarc.co
 Resources:
-  TaskIamRole:
-    Type: 'AWS::IAM::Role'
+  ACMCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties: 
+      DomainName: !Sub "api.${DomainName}"
+      DomainValidationOptions:
+        - DomainName: !Sub "api.${DomainName}"
+          ValidationDomain: !Sub "api.${DomainName}"
+      ValidationMethod: DNS
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: aws-ecs-typescript-api
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: aws-ecs-typescript-api-group
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: aws-ecs-typescript-api-role
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+  TaskRole:
+    Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statememt:
-          - Effect: Allow
-            Principal: 
-              Service:
-                - ecs-tasks.amazonaws.com
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+      Policies:
+        - PolicyDocument:
+            Statement:
               Action:
-                - 'sts:AssumeRole'
-      Path: /app/
-      Policies:
-        - PolicyName: todoapp-policy
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Action:
-                - 'ssmmessages:CreateControlChannel'
-                - 'ssmmessages:CreateDataChannel'
-                - 'ssmmessages:OpenControlChannel'
-                - 'ssmmessages:OpenDataChannel'
-                Effec: Allow
-                Resource: '*'
-  RoleName: todoapp-Sydney
-ExecutionRole:
-  Type: 'AWS::IAM::Role'
-  Properties:
-    AssumeRolePolicyDocument:
-      Version: 2012-10-17
-      Statement:
-        - Effect: Allow
-          Principal:
-            Service:
-              - ecs-tasks.amazonaws.com
-          Action:
-            - 'sts:AssumeRole'
-    ManagedPolicyArns: []
-    Path: /
-    Policies:
-      - PolicyName: ExecutionRole
-        PolicyDocument:
-          Version: 2012-10-17
-          Statement:
-            - Action:
-                - 'ecr:BatchCheckLayerAvailability'
-              Effect: Allow
-              Resrouce:
-                - '*'
-            - Action:
-               - 'ecr:BatchGetImage'
-              Effect: Allow
-              Resource:
-                - '*'
-            - Action:
-               - 'ecr:GetAuthorizationToken'
-              Effect: Allow
-              Resource:
-                - '*'
-            - Action:
-               - 'ecr:GetDownloadUrlForLayer'
-              Effect: Allow
-              Resource:
-                - '*'
-            - Action:
-               - 'ecr:CreateLogGroup'
-              Effect: Allow
-              Resource:
-                - '*'
-            - Action:
-               - 'ecr:CreateLogStream'
-              Effect: Allow
-              Resource:
-                - '*'
-            - Action:
-               - 'ecr:PutLogEvents'
-              Effect: Allow
-              Resource:
-                - '*'
-
-EcsTaskDefinition:
-  DependsOn:
-    - TaskIamRole
-    - CloudWatchLogsGroupTagger
-  Type: 'AWS::ECS::TaskDefinition'
-  Properties:
-    ContainerDefinition:
-      - Name: todoapp
-        Image: 585781887322.dkr.ecr.ap-southeast-2.amazonaws.com/jenkins/todoapp:latest
-        Essential: true
-        LogConfiguration:
-          LogDriver: awslogs
-          Options:
-            awslogs-group: !Ref CloudWatchLogsGroup
-            awslogs-region: !Ref 'AWS::Region'
-            awslogs-stream-prefix: todoapp-logs
-        Environment: []
-        PortMappings:
-          - ContainerPort: 80
-        DependsOn: []
-        Ulimits: []
-        LinuxParameters:
-          Capabilities:
-            Add:
-              - SYS_PTRACE
-    Family: todoapp-family
-    TaskRoleArn: !GetAtt
-      - TaskIamRole
-      - arn
-    NetworkMode: awsvpc
-    CPU: 1024
-    Memory: 2048
-    ExecutionRoleArn: !Ref ExecutionRole
-    RequiresCompatibilities:
-      - FARGATE
-
-SecurityGroupVpcModeALB:
-  Type: 'AWS::EC2:SecurityGroup'
-  Properties:
-    GroupdDescription: SecurityGroup for todoapp
-    VPCId: vpc-0c6c0a488ab519e12
-    SecurityGroupIngress:
-      - SourceSecurityGroupdId: sg-043210aa07c999c3c
-        IpProtocol: tcp
-        ToPort: 80
-        FromPort: 80
-
-CloudWatchLogsGroupTaggerCustomResourceRole:
-  Type: 'AWS::IAM::Role'
-  Properties:
-    AssumeRolePolicyDocument:
-      Version: 2012-10-17
-      Statememt:
-        - Effect: Allow
-          Principal:
-            Service: lambda.amazonaws.com
-          Action:
-            - 'sts:AssumeRole'
-    ManagedPolicyArns: []
-    Path: /
-    Policies:
-      - PolicyName: AllowCloudWatchLogsGroupTaggerCustomResource
-        PolicyDocument:
-          Version: 2012-10-17
-          Statement:
-            - Action:
-                - 'logs:CreateLogStream'
-                - 'logs:PutLogEvents'
-                - 'logs:DescribeLogStreams'
-              Effect: Allow
-              Resource: 'arn:aws:logs:*:*:*'
-            - Action:
-                - 'logs:DescribeLogGroups'
-                - 'logs:ListTagsLogGroup'
-                - 'logs:TagLogGroup'
-                - 'logs:UntagLogGroup'
-              Effect: Allow 
-              Resource: '*'
-
-CloudWatchLogsGroup:
-  Type: 'AWS::Logs::LogGroup'
-  Properties:
-    LogGroupName: !Join
-      - ''
-      - - /fargate/
-        - !Select
-          - 1
-          - !Split
-            - /
-            - !Ref 'AWS::StackId'
-        - /
-        - !Select
-          - 2
-          - !Split
-            - /
-            - !Ref 'AWS::StackId'
-    RetentionInDays: 30
-
-CloudWatchLogsGroupTagger:
-  DependsOn:
-    - CloudWatchLogsGroupTaggerCustomResource
-    - CloudWatchLogsGroup
-  Type: 'Custom::CloudWatchLogsGroupTagger'
-  Properties:
-    ServiceToken: !GetAtt
-      - CloudWatchLogsGroupTaggerCustomResource
-      - arn
-    Tags:
-      - Jenkins-deploy
-    LogGroupArn: !GetAtt
-      - CloudWatchLogsGroup
-      - arn
-
-EcsService:
-  DependsOn:
-    - EcsTaskDefinition
-    - TargetGroupPublic
-    - ListenerRulePublicHttpPublic
-    - ListenerRulePublicHttpsPyblic
-  Type: 'AWS::ECS::Service'
-  Properties:
-    PropagateTags: SERVICE
-    Cluster: arn:aws:ecs:ap-southeast-2:585781887322:cluster/Jenkins-App-Deploy
-    DesiredCount: 1
-    TaskDefinition: !Ref EcsTaskDefinition
-    CapacityProviderStrategy:
-        - CapacityProvider: FARGATE_SPORT
-          Weight: 1
-    EnableExecuteCommand: true
-    DeploymentController:
-      Type: ECS
-    DeploymentConfiguration:
-      DeploymentCircuitBreaker:
-        Enable: true
-        Rollback: true
-      MaximumPercent: 200
-      MinimumHealthyPercent: 100
-    PlatformVersion: 1.4.0
-    HealthCheckGracePeriodSeconds: 0
-    LoadBalancers:
-      - ContainerName: todoapp
-        ContainerPort: 80
-        TargetGroupArn: !Ref TargetGroupPublic
-    NetworkConfiguration:
-      AwsvpcConfiguration:
-        Subnets:
-          - subnet-01a79e54dd1a0064c
-          - subnet-0927958e96802d4df
-        SecurityGroup:
-          - !Ref SecurityGroupVpcModeALB
-
-PrioritySelectorCustomResourceRole:
-  Type: 'AWS::IAM::Role'
-  Properties:
-    AssumeRolePolicyDocument:
-      Version: 2012-10-17
-      Statement:
-        - Effect: Allow
-          Principal: 
-            Service: lambda.amazonaws.com
-          Action:
-            - 'sts:AssumeRole'
-    ManagedPolicyArns: []
-    Path: /
-    Policies:
-      - PolicyName: AllowPrioritySelectorCustomResource
-        PolicyDocument:
-          Version: 2012-10-17
-          Statement:
-            - Action:
-                - 'logs:CreateLogStream'
-                - 'logs:PutLogEvents'
-                - 'logs:DescribeLogStreams'
-              Effect: Allow
-              Resource: 'arn:aws:logs:*:*:*'
-            - Action:
-                - 'elasticloadbalancing:DescribeRules'
+                - ses:SendEmail
               Effect: Allow
               Resource: '*'
-
-TargetGroupPublic:
-  Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
-  Properties:
-    HealthCheckIntervalSeconds: 10
-    HealthCheckPath: /
-    HealthCheckTimeoutSeconds: 8
-    HealthyThresholdCount: 2
-    UnhealthyThresholdCount: 4
-    Port: 80
-    Protocol: HTTP
-    VpcId: vpc-0c6c0a488ab519e12
-    TargetType: ip
-    TargetGroupAttributes:
-      - Key: deregistration_delay.timeout_seconds
-        Value: 10
-
-ListenerRulePublicHttpPublic:
-  DependsOn:
-    - PrioritySelectorPublicHttpPublic
-  Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
-  Properties:
-    ListenerArn:
-    Actions:
-      - TargetGroupArn: !Ref TargetGroupPublic
-        Type: forward
-    Conditions:
-      - Field: host-header
-        Values: 
-          - todoapp.solzarc.co
-    Priority: !GetAtt
-      - PrioritySelectorPublicHttpPublic
-      - Priority
-
-TargetGroupPublicRoute53Public:
-    Type: 'AWS::Route53::RecordSet'
+          PolicyName: send-mail
+  ContainerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
     Properties:
-      HostedZoneName: dt.cowbell.realestate.com.au.
-      Name: giang-nguyen-onboarding.dt.cowbell.realestate.com.au.
-      Type: A
-      AliasTarget:
-        DNSName: ecs-c-LoadB-5I1CON49CMBY-1495891776.ap-southeast-2.elb.amazonaws.com
-        HostedZoneId: Z1GM3OXH4ZPM65
-      SetIdentifier: Id-giang-nguyen-onboarding-ecs
-      Weight: 100
-    
-HealthCheckerLambdaRole:
-    Type: 'AWS::IAM::Role'
+      GroupName: ContainerSecurityGroup
+      GroupDescription: Security group for container
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
     Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action:
-              - 'sts:AssumeRole'
-      ManagedPolicyArns: []
-      Path: /
-      Policies:
-        - PolicyName: AllowHealthCheckerLambda
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Action:
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
-                  - 'logs:DescribeLogStreams'
-                Effect: Allow
-                Resource: 'arn:aws:logs:*:*:*'
-              - Action:
-                  - 'elasticloadbalancing:DescribeTargetHealth'
-                  - 'ecs:DescribeServices'
-                  - 'ecs:DescribeTasks'
-                  - 'ecs:ListTasks'
-                  - 'cloudformation:DescribeStacks'
-                  - 'cloudformation:DescribeStackResource'
-                  - 'cloudformation:DescribeStackResources'
-                Effect: Allow
-                Resource: '*'
-
-WaitingForHealthyTasks:
-    Type: 'Custom::WaitingForHealthyTasks'
+      Family: aws-ecs-typescript-task
+      Cpu: 256
+      Memory: 512
+      NetworkMode: awsvpc
+      ExecutionRoleArn: !Ref ExecutionRole
+      TaskRoleArn: !Ref TaskRole
+      ContainerDefinitions:
+        - Name: aws-ecs-typescript-container
+          Image: 585781887322.dkr.ecr.ap-southeast-2.amazonaws.com/jenkins/todoapp:202111041714
+          PortMappings:
+            - ContainerPort: 80
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref LogGroup
+              awslogs-stream-prefix: ecs
+      RequiresCompatibilities:
+        - FARGATE
+  Service:
+    Type: AWS::ECS::Service
     Properties:
-      ServiceToken: !GetAtt 
-        - HealthCheckerLambda
-        - Arn
-      serviceSettings: !Join 
-        - ''
-        - - UpdateCriteria-
-          - AddMoreIfNeeded
-          - b181c6d5-225f-43db-b860-82cf37189df9
-    
-CapacityProviderStrategySetterLambda:
-    Type: 'AWS::Lambda::Function'
+      ServiceName: aws-ecs-typescript-svc
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref PrivateSub1
+            - !Ref PrivateSub2
+          SecurityGroups:
+            - !GetAtt ContainerSecurityGroup.GroupId
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
     Properties:
-      Role: !GetAtt 
-        - CapacityProviderStrategySetterLambdaRole
-        - Arn
-      Handler: index.handler
-      Timeout: 30
-      Runtime: python3.7
-      MemorySize: 128
-      Code:
-        ZipFile: >
-          from os import getenv
-
-          from boto3 import client
-
-          import logging
-
-
-          logger = logging.getLogger()
-
-          logger.setLevel(logging.INFO)
-
-          ecs_client = client('ecs')
-
-          cloudformation_client = client('cloudformation')
-
-
-          fargate_capacity_provider_strategies = [{ 'capacityProvider':
-          'FARGATE', 'weight': 1 }]
-
-
-          def handler(event, context):
-              logger.info(f"Event: {event}")
-              if not stack_completed(): return
-
-              desired_strategies = desired_capacity_providers(event)
-              if not strategy_changed(desired_strategies): return
-
-              set_desired_capacity_provider_strategies(desired_strategies)
-
-          def set_desired_capacity_provider_strategies(desired_strategies):
-              ecs_client.update_service(
-                  cluster = getenv('CLUSTER_ARN'),
-                  service = getenv('SERVICE_NAME'),
-                  capacityProviderStrategy = desired_strategies,
-                  forceNewDeployment = True
-              )
-
-          def get_stack_status():
-              stack_name = getenv('STACK_NAME')
-              return cloudformation_client.describe_stacks(StackName = stack_name)['Stacks'][0]['StackStatus']
-
-          def stack_completed():
-              is_completed = get_stack_status().endswith('COMPLETE')
-              logger.info(f"Stack Completed?: {is_completed}")
-              return is_completed
-
-          def current_capacity_providers():
-              response = ecs_client.describe_services(cluster = getenv('CLUSTER_ARN'), services = [getenv('SERVICE_NAME')])
-              capacity_provider_strategies = response['services'][0]['capacityProviderStrategy']
-              logger.info(f"Current Capacity Provider strategies: {capacity_provider_strategies}")
-              return capacity_provider_strategies
-
-          def desired_capacity_providers(input):
-              desired_capacity_providers = capacity_strategy_transformer(input['capacity_provider_strategies']) if 'capacity_provider_strategies' in input else fargate_capacity_provider_strategies
-              logger.info(f"Desired Capacity Provider Strategies: {desired_capacity_providers}")
-              return desired_capacity_providers
-
-          def capacity_strategy_transformer(strategies):
-              return list(map(rejectNone, [{'capacityProvider': provider["capacity_provider"], 'base': provider.get("base", 0), 'weight': provider.get("weight")} for provider in strategies]))
-
-          def rejectNone(original):
-              return {k: v for k, v in original.items() if v is not None}
-
-          def strategy_changed(desired_strategies):
-              is_strategy_changed = desired_strategies != current_capacity_providers()
-              logger.info(f"Strategy Changed?: {is_strategy_changed}")
-              return is_strategy_changed
-      Environment:
-        Variables:
-          SERVICE_NAME: !GetAtt 
-            - EcsService
-            - Name
-          CLUSTER_ARN: >-
-            arn:aws:ecs:ap-southeast-2:669382012465:cluster/ecs-cluster-docker-training
-          STACK_NAME: !Ref 'AWS::StackId'
-    
-CapacityProviderStrategySetterLambdaRole:
-    Type: 'AWS::IAM::Role'
+      GroupName: LoadBalancerSecurityGroup
+      GroupDescription: Security group for load balancer
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action:
-              - 'sts:AssumeRole'
-      ManagedPolicyArns: []
-      Path: /
-      Policies:
-        - PolicyName: EcsUpdateServices
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Action:
-                  - 'ecs:UpdateService'
-                  - 'ecs:DescribeServices'
-                Effect: Allow
-                Resource: !Ref EcsService
-              - Action:
-                  - 'cloudformation:DescribeStacks'
-                Effect: Allow
-                Resource: '*'
-              - Action:
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
-                  - 'logs:DescribeLogStreams'
-                Effect: Allow
-                Resource: '*'
-    Metadata:
-      'AWS::CloudFormation::Designer':
-        id: 248300ea-b6e3-4ac1-984a-bcc9f53f6ae1
-CapacityProviderStrategySetterLambdaLogGroup:
-    Type: 'AWS::Logs::LogGroup'
-    Properties:
-      LogGroupName: !Sub '/aws/lambda/${CapacityProviderStrategySetterLambda}'
-      RetentionInDays: 30
-    Metadata:
-      'AWS::CloudFormation::Designer':
-        id: 949b527a-feee-4d35-90dc-51996f0e221b
-CapacityProviderStrategySetterLambdaLogGroupTagger:
-    DependsOn:
-      - CloudWatchLogsGroupTaggerCustomResource
-      - CapacityProviderStrategySetterLambdaLogGroup
-    Type: 'Custom::CloudWatchLogsGroupTagger'
-    Properties:
-      ServiceToken: !GetAtt 
-        - CloudWatchLogsGroupTaggerCustomResource
-        - Arn
-      Tags:
-        - flukis2=docker-training
-      LogGroupArn: !GetAtt 
-        - CapacityProviderStrategySetterLambdaLogGroup
-        - Arn
-    Metadata:
-      'AWS::CloudFormation::Designer':
-        id: e5944656-1f54-4cb4-b490-e13d3c108350
-CapacityProviderResetterEventRule:
-    Type: 'AWS::Events::Rule'
-    Properties:
-      Targets:
-        - Id: CapacityProviderStrategySetterLambda
-          Arn: !GetAtt 
-            - CapacityProviderStrategySetterLambda
-            - Arn
-          Input: >-
-            {"capacity_provider_strategies":[{"capacity_provider":"FARGATE_SPOT","weight":1}]}
-      ScheduleExpression: rate(1 hour)
-    Metadata:
-      'AWS::CloudFormation::Designer':
-        id: 2a7b5f91-6e98-48b7-a2ce-45281597f88b
-CapacityProviderResetterInvokePermission:
-    Type: 'AWS::Lambda::Permission'
-    Properties:
-      FunctionName: !Ref CapacityProviderStrategySetterLambda
-      SourceArn: !GetAtt 
-        - CapacityProviderResetterEventRule
-        - Arn
-      Action: 'lambda:InvokeFunction'
-      Principal: events.amazonaws.com
-    Metadata:
-      'AWS::CloudFormation::Designer':
-        id: 8416c32a-a721-4bec-b4d9-c6f71fca8167
-SpotNoCapacityHandlerStartFailedEventRule:
-  Type: 'AWS::Events::Rule'
-  Properties:
-    Targets:
-        - Id: Target
-          Arn: !GetAtt 
-            - CapacityProviderStrategySetterLambda
-            - Arn
-    EventPattern:
-        source:
-          - aws.ecs
-        detail-type:
-          - ECS Service Action
-        resources:
-          - !Ref EcsService
-        detail:
-          eventType:
-            - ERROR
-          eventName:
-            - SERVICE_TASK_PLACEMENT_FAILURE
-          clusterArn:
-            - >-
-              arn:aws:ecs:ap-southeast-2:669382012465:cluster/ecs-cluster-docker-training
-          capacityProviderArns:
-            - !Sub >-
-              arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:capacity-provider/FARGATE_SPOT
-    Metadata:
-      'AWS::CloudFormation::Designer':
-        id: 027f3bda-53ed-4842-b575-3564b386776a
-SpotNoCapacityHandlerInterruptedEventRule:
-    Type: 'AWS::Events::Rule'
-    Properties:
-      Targets:
-        - Id: Target
-          Arn: !GetAtt 
-            - CapacityProviderStrategySetterLambda
-            - Arn
-      EventPattern:
-        source:
-          - aws.ecs
-        detail-type:
-          - ECS Task State Change
-        detail:
-          clusterArn:
-            - >-
-              arn:aws:ecs:ap-southeast-2:669382012465:cluster/ecs-cluster-docker-training
-          taskDefinitionArn:
-            - !Ref EcsTaskDefinition
-          stoppedReason:
-            - Your Spot Task was interrupted.
-          stopCode:
-            - TerminationNotice
-    Metadata:
-      'AWS::CloudFormation::Designer':
-        id: d3014486-0d28-4d72-a2bb-42201139e234
-SpotNoCapacityHandlerStartFailedInvokePermission:
-    Type: 'AWS::Lambda::Permission'
-    Properties:
-      FunctionName: !Ref CapacityProviderStrategySetterLambda
-      Action: 'lambda:InvokeFunction'
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt 
-        - SpotNoCapacityHandlerStartFailedEventRule
-        - Arn
-    Metadata:
-      'AWS::CloudFormation::Designer':
-        id: 1726ff9a-7845-4d80-b025-404a2f0902ab
-SpotNoCapacityHandlerInterruptedInvokePermission:
-    Type: 'AWS::Lambda::Permission'
-    Properties:
-      FunctionName: !Ref CapacityProviderStrategySetterLambda
-      Action: 'lambda:InvokeFunction'
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt 
-        - SpotNoCapacityHandlerInterruptedEventRule
-        - Arn
-    Metadata:
-      'AWS::CloudFormation::Designer':
-        id: ca60827f-1fe5-42a8-93e6-af8955e42680
-Outputs:
-  ShipperVersion:
-    Value: 4.8.0
-  ShipperTarget:
-    Value: ecs
-  TaskIamRoleArn:
-    Value: !GetAtt 
-      - TaskIamRole
-      - Arn
-  CloudWatchLogsGroup:
-    Value: !Ref CloudWatchLogsGroup
-  Route53PublicNameHttp:
-    Value: !Join 
-      - '://'
-      - - http
-        - !Ref TargetGroupPublicRoute53Public
-  Route53PublicNameHttps:
-    Value: !Join 
-      - '://'
-      - - https
-        - !Ref TargetGroupPublicRoute53Public
+      Name: aws-ecs-typescript-api-alb
+      Subnets:
+        - !Ref PrivateSub1
+        - !Ref PrivateSub2
+      SecurityGroups:
+        - !GetAtt LoadBalancerSecurityGroup.GroupId
 
-
-
-
-
-
-          
-
-
-
-  
+# aws cloudformation create-stack --stack-name aws-ecs-typescript-api --template-body file://./ecs-1.yml --capabilities CAPABILITY_NAMED_IAM \
+# --parameters ParameterKey=VPCID,ParameterValue=YOUR_VPC_ID \
+# ParameterKey=Subnet1ID,ParameterValue=YOUR_SUBNET_1_ID \
+# ParameterKey=Subnet2ID,ParameterValue=YOUR_SUBNET_2_ID \
+# ParameterKey=DomainName,ParameterValue=YOUR_DOMAIN_NAME.com
