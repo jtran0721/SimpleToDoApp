@@ -1,15 +1,15 @@
 AWSTemplateFormatVersion: 2010-09-09
 Parameters:
-  PrivateSub1:
+   PrivateSub1:
     Type: String
     Default: subnet-0dcbe5dc23cad4fae
-  PrivateSub2:
+   PrivateSub2:
     Type: String
     Default: subnet-04dafc6015a245202
-  VPCID:
+   VPCID:
     Type: String
     Default: vpc-0c6c0a488ab519e12
-  DomainName:
+   DomainName:
     Type: String
     Default: solzarc.co
 Resources:
@@ -21,10 +21,54 @@ Resources:
         - DomainName: !Sub "api.${DomainName}"
           ValidationDomain: !Sub "api.${DomainName}"
       ValidationMethod: DNS
+  AutoScalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceAutoscaleRole'
+  AutoScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MinCapacity: 1
+      MaxCapacity: 2
+      ResourceId: service/Jenkins-App-Deploy/todoapp-ecs-svc
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+      RoleARN: !GetAtt AutoScalingRole.Arn
+  ApiScalingPolicyCPU:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: todoapp-svc-cpu
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        ScaleInCooldown: 10
+        ScaleOutCooldown: 10
+        TargetValue: 45.0
+  ApiScalingPolicyMemory:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: todoapp-svc-memory
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageMemoryUtilization 
+        ScaleInCooldown: 10
+        ScaleOutCooldown: 10
+        TargetValue: 50.0
   Cluster:
     Type: AWS::ECS::Cluster
     Properties:
-      clusterArn: arn:aws:ecs:ap-southeast-2:585781887322:cluster/Jenkins-App-Deploy
+      ClusterName: Jenkins-App-Deploy
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -65,8 +109,12 @@ Resources:
       GroupDescription: Security group for container
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
           CidrIp: 0.0.0.0/0
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -80,8 +128,10 @@ Resources:
       ContainerDefinitions:
         - Name: todoapp-container
           Image: 585781887322.dkr.ecr.ap-southeast-2.amazonaws.com/jenkins/todoapp:202111051557
+          # REPLACE WITH YOUR ACCOUNT NUMBER AND REGION
+          # Image: YOUR_AWS_ACCOUNT_NUMBER.dkr.ecr.YOUR_AWS_REGION.amazonaws.com/aws-ecs-typescript-api
           PortMappings:
-            - ContainerPort: 80
+            - ContainerPort: 8080
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -93,6 +143,7 @@ Resources:
   Service:
     Type: AWS::ECS::Service
     Properties:
+      # rename after first deploy
       ServiceName: todoapp-ecs-svc
       Cluster: !Ref Cluster
       TaskDefinition: !Ref TaskDefinition
@@ -106,6 +157,10 @@ Resources:
             - !Ref PrivateSub2
           SecurityGroups:
             - !GetAtt ContainerSecurityGroup.GroupId
+      LoadBalancers:
+        - TargetGroupArn: !Ref TargetGroup
+          ContainerPort: 8080
+          ContainerName: todoapp-container
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -130,8 +185,53 @@ Resources:
       SecurityGroups:
         - !GetAtt LoadBalancerSecurityGroup.GroupId
 
-# aws cloudformation create-stack --stack-name aws-ecs-typescript-api --template-body file://./ecs-1.yml --capabilities CAPABILITY_NAMED_IAM \
-# --parameters ParameterKey=VPCID,ParameterValue=YOUR_VPC_ID \
-# ParameterKey=Subnet1ID,ParameterValue=YOUR_SUBNET_1_ID \
-# ParameterKey=Subnet2ID,ParameterValue=YOUR_SUBNET_2_ID \
-# ParameterKey=DomainName,ParameterValue=YOUR_DOMAIN_NAME.com
+  HTTPlistener:
+   Type: "AWS::ElasticLoadBalancingV2::Listener"
+   Properties:
+     DefaultActions:
+       - Type: "redirect"
+         RedirectConfig:
+           Protocol: "HTTPS"
+           Port: 443
+           Host: "#{host}"
+           Path: "/#{path}"
+           Query: "#{query}"
+           StatusCode: "HTTP_301"
+     LoadBalancerArn: !Ref LoadBalancer
+     Port: 80
+     Protocol: "HTTP"
+
+  HTTPSLoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn: LoadBalancer
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      SslPolicy: "ELBSecurityPolicy-2016-08"
+      Certificates: 
+      - CertificateArn: !Ref ACMCertificate
+  
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: LoadBalancer
+    Properties:
+      TargetType: ip
+      Name: aws-ecs-typescript-tg
+      Port: 8080
+      Protocol: HTTP
+      VpcId: !Ref VPCID
+  
+  ApiDomain:
+    Type: AWS::Route53::RecordSet
+    DependsOn: LoadBalancer
+    Properties:
+      HostedZoneName: !Sub "${DomainName}."
+      Name: !Sub "api.${DomainName}"
+      Type: CNAME
+      TTL: 60
+      ResourceRecords:
+        - !GetAtt LoadBalancer.DNSName
