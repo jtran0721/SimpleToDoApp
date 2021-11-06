@@ -76,7 +76,8 @@ Resources:
     Properties:
       ServiceName: !Ref 'ServiceName'
       Cluster:
-        Fn::ImportValue: 'ClusterName'
+        - Jenkins-App-Deploy
+        
       LaunchType: FARGATE
       DeploymentConfiguration:
         MaximumPercent: 200
