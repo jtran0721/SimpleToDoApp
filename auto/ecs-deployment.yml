@@ -23,7 +23,7 @@ Parameters:
   EcsClusterStack:
     Type: String
     Description: Name of ECS Cluster stack to build off of
-    Default: ecs-cluster-todoapp
+    Default: Jenkins-App-Deploy
 
   Image:
     Type: String
@@ -92,7 +92,7 @@ Resources:
     Properties:
       ContainerDefinitions:
         -
-          Name: hello-world
+          Name: todoapp
           Essential: true
           Image: !Ref Image
           LogConfiguration:
