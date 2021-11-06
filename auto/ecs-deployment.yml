@@ -13,6 +13,7 @@ Parameters:
     Default: ToDoAPP
   Image:
     Type: String
+    Default: 585781887322.dkr.ecr.ap-southeast-2.amazonaws.com/jenkins/todoapp:202111051557
   ContainerPort:
     Type: Number
     Description: What port number the application inside the docker container is binding to
