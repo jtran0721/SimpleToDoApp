@@ -109,9 +109,7 @@ Resources:
       Port: !Ref 'ContainerPort'
       Protocol: HTTP
       UnhealthyThresholdCount: 2
-      VpcId:
-        Fn::ImportValue:
-            Fn::Sub: ${Environment}-vpc-id
+      VpcId: vpc-0c6c0a488ab519e12
   Listener:
     Type: 'AWS::ElasticLoadBalancingV2::Listener'
     Properties:
@@ -124,7 +122,7 @@ Resources:
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: aws-ecs-typescript-api-alb
+      Name: aws-ecs-todoapp-alb
       Subnets:
          - subnet-01a79e54dd1a0064c
          - subnet-0927958e96802d4df
