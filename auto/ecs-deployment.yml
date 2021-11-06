@@ -1,124 +1,128 @@
-AWSTemplateFormatVersion: 2010-09-09
-Description: Starter template for ECS
-
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ADF CloudFormation Sample Template (NodeJS Application)
+Metadata:
+  License: Apache-2.0
 Parameters:
-  PrivateSub1:
+  Environment:
+    Description: The Current Environment
     Type: String
-    Default: subnet-0dcbe5dc23cad4fae
-
-  PrivateSub2:
+    Default: Production
+  ServiceName:
     Type: String
-    Default: subnet-04dafc6015a245202
-
-  VpcStack:
-    Type: String
-    Description: Name of VPC stack to build off of
-    Default: vpc-0c6c0a488ab519e12
-  
-  SecurityGrp:
-    Type: String
-    Description: Name of Securtity GroupDescription
-    Default: sg-043210aa07c999c3c
-
-  EcsClusterStack:
-    Type: String
-    Description: Name of ECS Cluster stack to build off of
-    Default: Jenkins-App-Deploy
-
+    Description: A name for the service
+    Default: ToDoAPP
   Image:
     Type: String
-    Description: URI of image you would like to use
-    Default: 585781887322.dkr.ecr.ap-southeast-2.amazonaws.com/jenkins/todoapp:202111051557
+  ContainerPort:
+    Type: Number
+    Description: What port number the application inside the docker container is binding to
+    Default: 80
+  ContainerCpu:
+    Type: Number
+    Default: 256
+    Description: How much CPU to give the container. 1024 is 1 CPU
+  ContainerMemory:
+    Type: Number
+    Default: 512
+    Description: How much memory in megabytes to give the container
+  Path:
+    Type: String
+    Default: "*"
+    Description: A path on the public load balancer that this service
+                 should be connected to. Use * to send all load balancer
+                 traffic to this service.
+  Priority:
+    Type: Number
+    Default: 1
+    Description: The priority for the routing rule added to the load balancer.
+                 This only applies if your have multiple services which have been
+                 assigned to different paths on the load balancer.
+  DesiredCount:
+    Type: Number
+    Default: 2
+    Description: How many copies of the service task to run
 
 Resources:
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Ref 'ServiceName'
+      Cpu: !Ref 'ContainerCpu'
+      Memory: !Ref 'ContainerMemory'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn:
+        Fn::ImportValue: 'ECSTaskExecutionRole'
+      TaskRoleArn: !Ref "AWS::NoValue"
+      ContainerDefinitions:
+        - Name: !Ref 'ServiceName'
+          Cpu: !Ref 'ContainerCpu'
+          Memory: !Ref 'ContainerMemory'
+          Image: !Ref 'Image'
+          PortMappings:
+            - ContainerPort: !Ref 'ContainerPort'
+          Environment:
+            - Name: "REGION"
+              Value: !Ref AWS::Region
+            - Name: "SERVICE_NAME"
+              Value: !Ref ServiceName
+            - Name: "ENVIRONMENT"
+              Value: !Ref Environment
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: LoadBalancerRule
+    Properties:
+      ServiceName: !Ref 'ServiceName'
+      Cluster:
+        Fn::ImportValue: 'ClusterName'
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+      DesiredCount: !Ref 'DesiredCount'
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - Fn::ImportValue: 'FargateContainerSecurityGroup'
+          Subnets: 
+              - Fn::ImportValue:
+                  Fn::Sub: ${Environment}-public-subnet-1a
+              - Fn::ImportValue:
+                  Fn::Sub: ${Environment}-public-subnet-1b
+              - Fn::ImportValue:
+                  Fn::Sub: ${Environment}-public-subnet-1c
+      TaskDefinition: !Ref 'TaskDefinition'
+      LoadBalancers:
+        - ContainerName: !Ref 'ServiceName'
+          ContainerPort: !Ref 'ContainerPort'
+          TargetGroupArn: !Ref 'TargetGroup'
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      HealthCheckEnabled: true
-      HealthCheckPort: 8080
+      HealthCheckIntervalSeconds: 6
+      HealthCheckPath: /version
       HealthCheckProtocol: HTTP
-      Port: 8080
-      Protocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
       TargetType: ip
-      VpcId: !Ref VpcStack
-        
-
-  Listener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - Order: 1
-          TargetGroupArn: !Ref TargetGroup
-          Type: forward
-      LoadBalancerArn:
-        Fn::ImportValue: !Sub ${EcsClusterStack}
-      Port: 8080
+      Name: !Ref 'ServiceName'
+      Port: !Ref 'ContainerPort'
       Protocol: HTTP
-    DependsOn:
-      - TargetGroup
-
-  FargateService:
-    Type: AWS::ECS::Service
+      UnhealthyThresholdCount: 2
+      VpcId:
+        Fn::ImportValue:
+            Fn::Sub: ${Environment}-vpc-id
+  LoadBalancerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
-      Cluster:
-        Fn::ImportValue: !Sub ${EcsClusterStack}
-      DeploymentController:
-        Type: ECS
-      DesiredCount: 1
-      HealthCheckGracePeriodSeconds: 60
-      LaunchType: FARGATE
-      LoadBalancers:
-        -
-          ContainerName: todoapp-container
-          ContainerPort: 8080
-          TargetGroupArn: !Ref TargetGroup
-      NetworkConfiguration:
-          AwsvpcConfiguration:
-            SecurityGroups:
-              - !Ref SecurityGrp
-            Subnets:
-              - !Ref PrivateSub1
-              - !Ref PrivateSub2
-                
-      TaskDefinition: !Ref FargateServiceTaskDefinition
-
-  FargateServiceLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      RetentionInDays: 7
-
-  FargateServiceTaskDefinition:
-    Type: AWS::ECS::TaskDefinition
-    Properties:
-      ContainerDefinitions:
-        -
-          Name: todoapp
-          Essential: true
-          Image: !Ref Image
-          LogConfiguration:
-              LogDriver: awslogs
-              Options:
-                awslogs-group: !Ref FargateServiceLogGroup
-                awslogs-stream-prefix: todoapp-container
-                awslogs-region: !Ref AWS::Region
-          PortMappings:
-            -
-              ContainerPort: 8080
-              HostPort: 8080
-              Protocol: tcp
-      Cpu: '256'
-      ExecutionRoleArn:
-        Fn::ImportValue: !Sub ${EcsClusterStack}-default-role
-      Memory: '512'
-      NetworkMode: awsvpc
-      RequiresCompatibilities:
-        -  FARGATE
-      TaskRoleArn:
-        Fn::ImportValue: !Sub ${EcsClusterStack}-default-role
-
-Outputs:
-  FargateServiceName:
-    Description: A reference to the created Fargate Service
-    Value: !GetAtt FargateService.Name
-    Export:
-      Name: !Sub ${AWS::StackName}-fargate-service-name
+      Actions:
+        - TargetGroupArn: !Ref 'TargetGroup'
+          Type: 'forward'
+      Conditions:
+        - Field: path-pattern
+          Values: [!Ref 'Path']
+      ListenerArn:
+        Fn::ImportValue: 'PublicListener'
+      Priority: !Ref 'Priority'
