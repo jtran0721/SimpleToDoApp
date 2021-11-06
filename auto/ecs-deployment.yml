@@ -51,7 +51,7 @@ Resources:
           TargetGroupArn: !Ref TargetGroup
           Type: forward
       LoadBalancerArn:
-        Fn::ImportValue: !Sub ${EcsClusterStack}-alb-arn
+        Fn::ImportValue: !Sub ${EcsClusterStack}
       Port: 8080
       Protocol: HTTP
     DependsOn:
@@ -61,7 +61,7 @@ Resources:
     Type: AWS::ECS::Service
     Properties:
       Cluster:
-        Fn::ImportValue: !Sub ${EcsClusterStack}-ecs-cluster
+        Fn::ImportValue: !Sub ${EcsClusterStack}
       DeploymentController:
         Type: ECS
       DesiredCount: 1
