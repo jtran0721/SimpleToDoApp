@@ -74,9 +74,7 @@ Resources:
     DependsOn: LoadBalancerRule
     Properties:
       ServiceName: !Ref 'ServiceName'
-      Cluster:
-        - Jenkins-App-Deploy
-        
+      Cluster: Jenkins-App-Deploy
       LaunchType: FARGATE
       DeploymentConfiguration:
         MaximumPercent: 200
