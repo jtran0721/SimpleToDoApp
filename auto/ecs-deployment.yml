@@ -122,6 +122,15 @@ Resources:
       LoadBalancerArn: !Ref LoadBalancer
       Port: '80'
       Protocol: HTTP
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: aws-ecs-typescript-api-alb
+      Subnets:
+         - subnet-01a79e54dd1a0064c
+         - subnet-0927958e96802d4df
+      SecurityGroups:
+        - sg-043210aa07c999c3c
 
   LoadBalancerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
