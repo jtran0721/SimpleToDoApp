@@ -86,14 +86,11 @@ Resources:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
           SecurityGroups:
-            - Fn::ImportValue: 'FargateContainerSecurityGroup'
+            - sg-043210aa07c999c3c
           Subnets: 
-              - Fn::ImportValue:
-                  Fn::Sub: ${Environment}-public-subnet-1a
-              - Fn::ImportValue:
-                  Fn::Sub: ${Environment}-public-subnet-1b
-              - Fn::ImportValue:
-                  Fn::Sub: ${Environment}-public-subnet-1c
+              - subnet-01a79e54dd1a0064c
+              - subnet-0927958e96802d4df
+              
       TaskDefinition: !Ref 'TaskDefinition'
       LoadBalancers:
         - ContainerName: !Ref 'ServiceName'
