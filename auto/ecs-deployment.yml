@@ -53,8 +53,7 @@ Resources:
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
-      ExecutionRoleArn:
-        Fn::ImportValue: 'ECSTaskExecutionRole'
+      ExecutionRoleArn: arn:aws:iam::585781887322:role/Jenkins-Agent-Build-Role
       TaskRoleArn: !Ref "AWS::NoValue"
       ContainerDefinitions:
         - Name: !Ref 'ServiceName'
