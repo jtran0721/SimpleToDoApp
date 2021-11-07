@@ -40,6 +40,7 @@ Resources:
     Properties:
       GroupName: ToDoAppSecurityGroup
       GroupDescription: Security group for ToDpApp container
+      VpcId: vpc-0c6c0a488ab519e12
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
@@ -78,6 +79,7 @@ Resources:
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
+          VpcId: vpc-0c6c0a488ab519e12
           Subnets:
             - !Ref PublicSubnet1
           SecurityGroups:
