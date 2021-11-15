@@ -7,4 +7,4 @@ cd "$(dirname "$0")/.."
 BNDL_IMAGE="585781887322.dkr.ecr.ap-southeast-2.amazonaws.com/tools/stacker:stackger-1.7.2"
 
 exec docker run --rm -v "${SHIPPER_IMAGE}" \
-    -c ecs.deployment.yml 
+    -c ecs-deployment.yml 
