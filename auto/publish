@@ -8,7 +8,6 @@ cd $(dirname $0)/..
 mkdir -p artifacts
 TZ=Australia/Melbourne date +'%Y%m%d%H%M' >artifacts/version.txt
 VERSION=$(cat artifacts/version.txt)
-docker build -t ${REPOSITORY}:${VERSION} .
 TAG="585781887322.dkr.ecr.ap-southeast-2.amazonaws.com/jenkins/todoapp:${VERSION}"
 
 docker build -t $TAG .
