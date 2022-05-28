@@ -1,7 +1,7 @@
 steps:
 
   - name: ":truck: build and deploy image to ECR"
-    command: ./auto/push-ecr
+    command: ./auto/publish-image
     agents:
       queue: default
 
