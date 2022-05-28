@@ -1,6 +1,6 @@
 #! /bin/bash -e
 #
-# Publish Docker image
+# Publish Docker image to ECR
 
 set -eux
 cd $(dirname $0)/..
