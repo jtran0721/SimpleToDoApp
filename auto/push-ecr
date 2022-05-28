@@ -4,13 +4,18 @@
 
 cd $(dirname $0)/..
 
+#Login to ECR with aws cli
+
+aws ecr get-login-password --region region | docker login --username AWS --password-stdin 585781887322.dkr.ecr.ap-southeast-2.amazonaws.com
+
 REPOSITORY="585781887322.dkr.ecr.ap-southeast-2.amazonaws.com/todoapp/todoapp"
 VERSION=$(TZ=Australia/Melbourne date +'%Y%m%d%H%M')
 
 docker build -t ${REPOSITORY}:${VERSION} .
 
+
 # Release to new registry
-docker push ${REPOSITORY}:${VERSION}
+
 docker tag ${REPOSITORY}:${VERSION} ${REPOSITORY}:latest
 docker push ${REPOSITORY}:latest
 
