@@ -1,0 +1,22 @@
+steps:
+
+  - name: ":building_construction: Building Docker Image"
+    command: ./auto/build
+    agents:
+      queue: default
+
+  - block: ":rocket: Deploy to PROD?"
+    branches: main
+
+  - name: ":terraform: Deploy to prod"
+    command: ./auto/terraform-apply
+    agents:
+      queue: default
+      
+  - block: ":skull_and_crossbones: Destroy Infrastructure?"
+    branches: main
+
+  - name: ":terraform: Destroy build on demand"
+    command: ./auto/terraform-destroy
+    agents:
+      queue: default
