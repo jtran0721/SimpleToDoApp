@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
@@ -68,3 +69,11 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `yarn build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+=======
+### <a href="#user-content-title" id="title"> Simple To Do App</a>
+
+This is my little project to learn about integrated Jenkins with AWS. The purpose of this is so I can learn DEVOPS.
+
+I didn't code this app myself but I learn it from Youtube.
+
+>>>>>>> 520126aa61c53582b41b282e3f48d3e68785f7d4
