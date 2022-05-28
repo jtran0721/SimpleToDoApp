@@ -1,8 +1,16 @@
 steps:
 
-  - name: ":building_construction: Buil and publish Docker Image to ECR"
+  - name: ":building_construction: Buil and publish Docker Image"
     command: ./auto/publish
     agents:
       queue: default
+
+  - wait
+
+  - name: ":truck: Push image to ECR"
+    command: ./auto/push-ecr
+    agents:
+      queue: default
+
 
   
