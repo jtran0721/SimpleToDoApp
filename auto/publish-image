@@ -5,7 +5,7 @@
 cd $(dirname $0)/..
 
 #Log in to ECR
-docker login--username AWS --password-stdin $(aws ecr get-login-password --region ap-southeast-2) 585781887322.dkr.ecr.ap-southeast-2.amazonaws.com
+aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin 585781887322.dkr.ecr.ap-southeast-2.amazonaws.com
 
 REPOSITORY="585781887322.dkr.ecr.ap-southeast-2.amazonaws.com/todoapp"
 VERSION=$(TZ=Australia/Melbourne date +'%Y%m%d%H%M')
